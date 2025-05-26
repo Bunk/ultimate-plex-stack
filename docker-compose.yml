@@ -15,7 +15,6 @@
 #
 # NOTE: This is not a plug and play solution, some research / customization will be required to make this work as intented
 # Feel free to customize ie: remove/change/add containers as needed - one size does not fit all
-
 ---
 version: "3.0"
 
@@ -28,25 +27,26 @@ services:
   #Plex - used to display the media
   #
   #This can also be replaced by Emby/Jellyfin
-  # plex:
-  #   image: lscr.io/linuxserver/plex:latest
-  #   container_name: plex
-  #   network_mode: host
-  #   environment:
-  #     - PUID=${PUID}
-  #     - PGID=${GUID}
-  #     - TZ=${TZ}
-  #     - VERSION=docker
-  #     - PLEX_CLAIM=${PLEX_CLAIM}
-  #   ports:
-  #     - 32400:32400
-  #   devices:
-  #    - /dev/dri:/dev/dri #Required for plex HW transcoding / QuickSync
-  #   volumes:
-  #     - ${BASE_PATH}/plex/config:/config
-  #     - ${MEDIA_SHARE}/media/tv:/tv
-  #     - ${MEDIA_SHARE}/media/movies:/movies
-  #   restart: unless-stopped
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    network_mode: host
+    environment:
+      - PUID=${PUID}
+      - PGID=${GUID}
+      - TZ=${TZ}
+      - VERSION=docker
+      - PLEX_CLAIM=${PLEX_CLAIM}
+    ports:
+      - 32400:32400
+    # devices:
+    #  - /dev/dri:/dev/dri #Required for plex HW transcoding / QuickSync
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${BASE_PATH}/plex/config:/config
+      - ${MEDIA_SHARE}/media/tv:/tv
+      - ${MEDIA_SHARE}/media/movies:/movies
+    restart: unless-stopped
     
   #Radarr - used to find movies automatically
   radarr:
@@ -57,6 +57,7 @@ services:
       - PGID=${GUID}
       - TZ=${TZ}
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - ${BASE_PATH}/radarr/config:/config
       - ${MEDIA_SHARE}:/share #Access to the entire share
     networks: #Does not connect to overseer if you use NPM
@@ -74,6 +75,7 @@ services:
       - PGID=${GUID}
       - TZ=${TZ}
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - ${BASE_PATH}/sonarr/config:/config
       - ${MEDIA_SHARE}:/share #Access to the entire share
     networks: #Does not connect to overseer if you use NPM
@@ -263,6 +265,7 @@ services:
       - PGID=${GUID}
       - TZ=${TZ}
     volumes:
+      - /etc/localtime:/etc/localtime:ro
       - ${BASE_PATH}/bazarr/config:/config
       - ${MEDIA_SHARE}:/share
     ports:
@@ -366,14 +369,27 @@ services:
 
   # Used to sync Trash Guides config's to radarr and sonarr
   # Only accessible via command line! No GUI
-  recyclarr:
-    image: ghcr.io/recyclarr/recyclarr
-    container_name: recyclarr
-    user: ${PUID}:${GUID}
-    networks:
-     - proxy
-    volumes:
-      - ${BASE_PATH}/recyclarr/config:/config
+  # recyclarr:
+  #   image: ghcr.io/recyclarr/recyclarr
+  #   container_name: recyclarr
+  #   user: ${PUID}:${GUID}
+  #   networks:
+  #    - proxy
+  #   volumes:
+  #     - ${BASE_PATH}/recyclarr/config:/config
+  #   environment:
+  #     - TZ=${TZ}
+  #     - RECYCLARR_CREATE_CONFIG=true
+ 
+  configarr:
+    image: ghcr.io/raydak-labs/configarr:latest
+    container_name: configarr
+    user: ${PUID}:${GUID} # Optional, defaults to root:root
     environment:
       - TZ=${TZ}
- 
+    volumes:
+      - ${BASE_PATH}/configarr/config:/app/config # Contains the config.yml and secrets.yml
+      - ${BASE_PATH}/configarr/dockerrepos:/app/repos # Cache repositories
+      - ${BASE_PATH}/configarr/custom/cfs:/app/cfs # Optional if custom formats locally provided
+      - ${BASE_PATH}/configarr/custom/templates:/app/templates # Optional if custom templates
+    # restart: "no" # optional make sure this is set to no or removed. Default is no
